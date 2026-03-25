@@ -9,6 +9,7 @@ import { databaseConfig } from './config/database.config';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 
@@ -71,6 +72,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     HealthModule,
     AuthModule,
     OrganizationsModule,
+    CatalogModule,
   ],
 })
 export class AppModule implements NestModule {
