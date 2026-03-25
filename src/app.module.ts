@@ -8,7 +8,9 @@ import { appConfig, jwtConfig, webhookConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 
 @Module({
   imports: [
@@ -67,6 +69,8 @@ import { HealthModule } from './modules/health/health.module';
 
     DatabaseModule,
     HealthModule,
+    AuthModule,
+    OrganizationsModule,
   ],
 })
 export class AppModule implements NestModule {

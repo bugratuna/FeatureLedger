@@ -38,8 +38,9 @@ module.exports = {
       },
     ],
     'import/no-duplicates': 'error',
-    // TypeScript's own compiler handles unresolved module checks; no need to duplicate with ESLint
+    // TypeScript's own compiler handles unresolved module and named-export checks
     'import/no-unresolved': 'off',
+    'import/named': 'off',
 
     // General quality
     'no-console': 'warn',

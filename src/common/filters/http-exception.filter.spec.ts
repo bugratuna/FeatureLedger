@@ -1,9 +1,8 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
-import { ArgumentsHost } from '@nestjs/common';
+import { HttpException, HttpStatus , ArgumentsHost } from '@nestjs/common';
 
+import { HttpExceptionFilter } from './http-exception.filter';
 import { ErrorCode } from '../constants/error-codes';
 import { AppException } from '../exceptions/app.exception';
-import { HttpExceptionFilter } from './http-exception.filter';
 
 function buildMockHost(overrides: { requestId?: string } = {}): ArgumentsHost {
   const json = jest.fn();
