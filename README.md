@@ -125,7 +125,91 @@ docker compose up --build
 
 ---
 
+## Implemented modules
+
+| Module | Status | Description |
+|---|---|---|
+| Auth | Done | JWT login, refresh token rotation, reuse detection |
+| Users | Done | User accounts with hashed passwords |
+| Organizations | Done | Multi-tenant orgs with slug derivation |
+| Memberships | Done | Role-based org membership, invitations |
+| Catalog | Done | Features, plans, addons, and feature mappings |
+| Subscriptions | Planned | Org-to-plan subscriptions |
+| Entitlements | Planned | Access checks, snapshots, overrides |
+| Usage | Planned | Usage event ingestion, counters, summaries |
+| API Keys | Planned | Machine-to-machine key management |
+| Webhooks | Planned | Outbox-backed event delivery |
+| Audit | Planned | Immutable audit log |
+
+---
+
+## Catalog domain
+
+The catalog is platform-owned — only platform admins can write to it. It defines what can be sold before any tenant subscribes.
+
+**Feature** — one measurable or access-controlled capability. `code` is a stable lowercase identifier (e.g. `api-calls`, `seats`). It is normalized on create and cannot be changed safely after integrations depend on it.
+
+**Plan** — a named bundle of features. `slug` is derived from `name` at creation (e.g. `"Pro Plan"` → `"pro-plan"`). Plans can be deactivated to stop new subscriptions without losing historical data.
+
+**PlanFeature** — links a plan to a feature with a limit and overage rule.
+
+**Addon** — an optional feature bundle a tenant can add on top of a base plan. `slug` is derived the same way as plans.
+
+**AddonFeature** — links an addon to a feature with a limit and overage rule.
+
+### MeterType
+
+| Value | Meaning |
+|---|---|
+| `boolean` | Gated on/off access (e.g. SSO enabled) |
+| `quantity` | Countable discrete units (e.g. number of reports) |
+| `seats` | User slots (e.g. team members) |
+| `storage` | Byte-based storage (e.g. file storage) |
+| `usage` | High-frequency event metering (e.g. API calls) |
+
+### OveragePolicy
+
+| Value | Behavior |
+|---|---|
+| `deny` | Block usage above the limit (default) |
+| `soft_limit` | Allow usage and send a warning |
+| `allow_and_flag` | Allow usage and flag for billing review |
+
+### Business rules
+
+- Feature `code` is normalized to lowercase on create (`API_Calls` → `api_calls`). Underscores are kept.
+- Plan and addon slugs are derived from `name`. They cannot be changed after creation.
+- Duplicate codes and duplicate slugs are rejected with a `409 RESOURCE_CONFLICT` error.
+- The same feature can only be assigned to a plan or addon once.
+- `includedLimit: null` means unlimited — no quota enforcement for that mapping.
+- `overagePolicy` defaults to `deny` when not provided.
+- Deleting a plan or addon also deletes its feature mappings (CASCADE).
+- Deleting a feature is blocked if it is assigned to any plan or addon (RESTRICT).
+
+---
+
+## Authorization
+
+All requests require a valid JWT access token (`Authorization: Bearer <token>`).
+
+**`JwtAuthGuard`** — verifies the token and sets `req.user`. Routes marked `@Public()` skip this guard.
+
+**`OrganizationMemberGuard`** — checks that the caller is a member of the org in the route params. Attaches `req.membership`.
+
+**`RolesGuard`** — checks minimum role weight: `owner(50) > admin(40) > billing(30) > analyst(20) > integration(10)`.
+
+**`PlatformAdminGuard`** — checks `req.user.isPlatformAdmin`. Used on all catalog write routes. Platform admins bypass org and role guards.
+
+---
+
 ## Migrations
+
+Two migrations exist:
+
+| File | Tables |
+|---|---|
+| `1700000000001-InitialAuthAndTenancy` | `users`, `organizations`, `memberships`, `invitations`, `refresh_tokens` |
+| `1700000000002-CatalogTables` | `features`, `plans`, `plan_features`, `addons`, `addon_features` |
 
 Schema changes go through TypeORM migrations — `synchronize: false` everywhere, including development. This forces every schema change to be committed as a reviewed migration file, preventing surprises in production.
 
@@ -146,28 +230,43 @@ npm run migration:revert
 
 All routes live under `/api/v1`. See [docs/api-examples.md](docs/api-examples.md) for full request/response examples.
 
-| Domain | Key endpoints |
-|---|---|
-| Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` |
-| Organizations | `POST /organizations`, `GET /organizations/:id/members` |
-| Catalog | `POST /features`, `POST /plans`, `POST /addons` |
-| Subscriptions | `POST /organizations/:id/subscriptions` |
-| Entitlements | `GET /organizations/:id/entitlements`, `POST /organizations/:id/access/check` |
-| Usage | `POST /organizations/:id/usage/events`, `GET /organizations/:id/usage/summary` |
-| API Keys | `POST /organizations/:id/api-keys` |
-| Webhooks | `POST /organizations/:id/webhooks` |
-| Audit | `GET /organizations/:id/audit-logs` |
-| Health | `GET /health/live`, `GET /health/ready` |
+Catalog routes require a platform admin JWT. All other authenticated routes require a regular user JWT.
+
+| Domain | Key endpoints | Status |
+|---|---|---|
+| Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Done |
+| Organizations | `POST /organizations`, `GET /organizations/:id/members` | Done |
+| Catalog — Features | `GET/POST /catalog/features`, `GET/PATCH/DELETE /catalog/features/:id` | Done |
+| Catalog — Plans | `GET/POST /catalog/plans`, `GET/PATCH/DELETE /catalog/plans/:id` | Done |
+| Catalog — Plan features | `POST /catalog/plans/:id/features`, `GET /catalog/plans/:id/features`, `DELETE /catalog/plans/:id/features/:featureId` | Done |
+| Catalog — Addons | `GET/POST /catalog/addons`, `GET/PATCH/DELETE /catalog/addons/:id` | Done |
+| Catalog — Addon features | `POST /catalog/addons/:id/features`, `GET /catalog/addons/:id/features`, `DELETE /catalog/addons/:id/features/:featureId` | Done |
+| Subscriptions | `POST /organizations/:id/subscriptions` | Planned |
+| Entitlements | `GET /organizations/:id/entitlements`, `POST /organizations/:id/access/check` | Planned |
+| Usage | `POST /organizations/:id/usage/events`, `GET /organizations/:id/usage/summary` | Planned |
+| API Keys | `POST /organizations/:id/api-keys` | Planned |
+| Webhooks | `POST /organizations/:id/webhooks` | Planned |
+| Audit | `GET /organizations/:id/audit-logs` | Planned |
+| Health | `GET /health/live`, `GET /health/ready` | Done |
 
 ---
 
-## Testing approach
+## Testing
 
-**Unit tests** cover pure domain logic: entitlement resolver, access decision, overage policies, refresh token reuse detection, webhook signing.
+**Current status: 6 suites · 56 unit tests · BUILD OK · LINT OK**
 
-**Integration tests** run against a real PostgreSQL instance to verify repository behavior, transaction flows, and unique constraint enforcement.
+Unit tests cover the risk-heavy domain logic in each implemented module:
 
-**E2E tests** exercise full HTTP flows: login/refresh rotation, access checks, usage ingestion idempotency, quota enforcement, subscription changes, webhook retries.
+| Test file | What it covers |
+|---|---|
+| `auth.service.spec.ts` | Login, refresh rotation, reuse detection, family revocation, logout |
+| `organization-member.guard.spec.ts` | Membership check, platform admin bypass |
+| `organizations.service.spec.ts` | Slug normalization (7 cases), slug conflict detection |
+| `membership-role.enum.spec.ts` | Role hierarchy ordering |
+| `http-exception.filter.spec.ts` | Error response shaping |
+| `catalog.service.spec.ts` | Code normalization, slug derivation, duplicate code/slug/mapping rejection, not-found propagation, default overage policy |
+
+Integration and E2E test configs exist (`test/jest-integration.json`, `test/jest-e2e.json`) but test files are not yet written. These will be added in later phases.
 
 Coverage is prioritized on risk-heavy business logic, not chased to 100%.
 

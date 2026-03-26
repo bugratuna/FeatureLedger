@@ -14,10 +14,8 @@ import { Plan } from './plan.entity';
 import { OveragePolicy } from '../enums/overage-policy.enum';
 
 /**
- * Rich many-to-many join between Plan and Feature.
- *
- * Carries entitlement configuration: how much of the feature is included
- * and what happens when a tenant exceeds that limit.
+ * Links a plan to a feature.
+ * Stores how many units are included and what happens when the limit is exceeded.
  */
 @Entity('plan_features')
 @Unique('uq_plan_feature', ['planId', 'featureId'])
@@ -31,10 +29,7 @@ export class PlanFeature {
   @Column({ name: 'feature_id', type: 'uuid' })
   featureId!: string;
 
-  /**
-   * How many units are included before overage kicks in.
-   * NULL means unlimited — no quota enforcement for this feature on this plan.
-   */
+  /** Units included before overage applies. NULL means no limit. */
   @Column({ name: 'included_limit', type: 'integer', nullable: true })
   includedLimit!: number | null;
 

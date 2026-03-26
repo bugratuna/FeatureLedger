@@ -5,32 +5,25 @@ import { PlanFeature } from './plan-feature.entity';
 import { MeterType } from '../enums/meter-type.enum';
 
 /**
- * A Feature represents one measurable or gateable capability in the platform.
+ * A Feature is one capability the platform can gate or measure.
  *
- * The `code` field is the stable, machine-readable identifier used throughout
- * the metering pipeline. It is normalized to lowercase kebab-case at creation
- * time and is immutable after creation — changing a code would silently break
- * any integration that records usage events against it.
+ * The `code` field is a stable, machine-readable identifier. It is normalized
+ * to lowercase on create. Do not change it after publishing — external systems
+ * send usage events by code, so renaming it would break them silently.
  */
 @Entity('features')
 export class Feature {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  /**
-   * Normalized, forever-stable machine identifier.
-   * Example: "api-calls", "seats", "export-pdf"
-   */
+  /** Stable lowercase identifier. Examples: "api-calls", "seats", "export-pdf" */
   @Column({ type: 'varchar', length: 100, unique: true })
   code!: string;
 
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
-  /**
-   * Human-readable unit label shown in UI and reports.
-   * Example: "API calls", "GB", "seats"
-   */
+  /** Label shown in UI and reports. Examples: "API calls", "GB", "seats" */
   @Column({ name: 'unit_label', type: 'varchar', length: 100, nullable: true })
   unitLabel!: string | null;
 

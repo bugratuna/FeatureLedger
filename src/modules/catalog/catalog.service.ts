@@ -257,8 +257,7 @@ export class CatalogService {
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   /**
-   * Normalizes a feature code to lowercase kebab-case.
-   * Underscores are preserved as-is since they're conventional in metric names.
+   * Normalize the code to lowercase. Underscores are kept (common in metric names).
    * "API_Calls" → "api_calls"  |  "Export PDF" → "export-pdf"
    */
   normalizeCode(raw: string): string {
@@ -270,8 +269,8 @@ export class CatalogService {
   }
 
   /**
-   * Derives a URL-safe slug from a name string.
-   * "Pro Plan!" → "pro-plan"
+   * Build a URL-safe slug from a name. "Pro Plan!" → "pro-plan"
+   * Used for plans and addons so their URLs stay simple and stable.
    */
   deriveSlug(name: string): string {
     return name
