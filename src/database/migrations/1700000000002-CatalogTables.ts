@@ -1,15 +1,14 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Creates the product catalog tables: features, plans, plan_features, addons, addon_features.
+ * Creates catalog tables: features, plans, plan_features, addons, addon_features.
  *
- * Design notes:
- * - No organization_id: the catalog is global/platform-owned, not tenant-scoped.
- * - plan_features and addon_features are rich join tables (carry entitlement config),
- *   not simple pivots, so they have their own UUID primary key.
- * - ON DELETE RESTRICT on feature_id prevents orphaning active entitlement data
- *   by removing a feature that plans depend on.
- * - ON DELETE CASCADE on plan_id/addon_id: removing a plan removes its feature mappings.
+ * Notes:
+ * - No organization_id. The catalog belongs to the platform, not to any tenant.
+ * - plan_features and addon_features are not simple join tables. They store limit
+ *   and policy data, so each row has its own UUID primary key.
+ * - Deleting a feature is blocked if any plan or addon uses it (RESTRICT).
+ * - Deleting a plan or addon removes its feature rows automatically (CASCADE).
  */
 export class CatalogTables1700000000002 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
