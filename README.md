@@ -286,11 +286,31 @@ Coverage is prioritized on risk-heavy business logic, not chased to 100%.
 
 ---
 
-## Future work
+## What's next
 
-- Redis for distributed throttling and refresh token revocation lists
-- Testcontainers for hermetic integration tests (no external DB required)
-- Metrics export to Prometheus
-- Background worker process separation (outbox poller)
-- Plan upgrade/downgrade proration logic
-- Multi-region considerations for usage counters
+The core product phases (subscriptions, entitlements, usage metering, webhooks) are the immediate next build targets. Each one depends on the catalog foundation completed in Phase 2.
+
+The two highest-value near-term infrastructure items are:
+
+**Testcontainers for integration tests** — the subscriptions and usage modules involve transactions, counter increments, and constraint-enforced idempotency that unit tests with mocked repositories cannot verify. The test scaffolding is already in place (`test/setup/`, `test/jest-integration.json`). This should be added when the first transaction-heavy module lands.
+
+**Prometheus metrics** — the `access/check` and usage ingestion endpoints will be on the hot path of every downstream integration. A `/metrics` endpoint should be added when those endpoints are built. Structured logs alone are not enough for production operation at that point.
+
+See [docs/engineering-backlog.md](docs/engineering-backlog.md) for the full prioritized backlog with rationale, tradeoffs, and contributor guidance.
+
+---
+
+## Deferred architecture work
+
+Six infrastructure topics were considered during design and deliberately deferred. They are not unplanned — each has a documented trigger, proposed direction, and tradeoffs.
+
+| Priority | Topic | When |
+|---|---|---|
+| 1 | Testcontainers for integration tests | When subscriptions/usage modules exist |
+| 2 | Prometheus metrics export | When access check and usage ingestion are built |
+| 3 | Background worker process separation | When outbox poller exists and webhook volume warrants it |
+| 4 | Redis for throttling and token revocation | At first horizontal scale event |
+| 5 | Plan upgrade/downgrade proration | When subscriptions are stable and billing integration begins |
+| 6 | Multi-region usage counters | Only with a demonstrated cross-region or data residency requirement |
+
+Items 1–2 are near-term. Items 3–4 are mid-term operational maturity work. Items 5–6 are domain depth and scale-stage concerns that would be premature now.

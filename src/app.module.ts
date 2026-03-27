@@ -8,10 +8,13 @@ import { appConfig, jwtConfig, webhookConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { AccessModule } from './modules/access/access.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { HealthModule } from './modules/health/health.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -73,6 +76,9 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     AuthModule,
     OrganizationsModule,
     CatalogModule,
+    SubscriptionsModule,
+    EntitlementsModule,
+    AccessModule,
   ],
 })
 export class AppModule implements NestModule {
